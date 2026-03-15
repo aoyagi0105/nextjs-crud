@@ -1,18 +1,20 @@
+[한국어](./README.kr.md) | [日本語](./README.jp.md)
+
 # motivation-Maker-web
 [Live Demo](https://spark-motivate.vercel.app/)
 
-motivation-Maker-web은 기존 모바일 앱 서비스의 가치를 웹 환경으로 확장하여, 사용자가 감명 깊게 읽은 동기부여 문구를 언제 어디서든 다시 확인하고 관리할 수 있도록 설계된 서비스입니다.
+motivation-Maker-web extends the core value of the original mobile service to the web environment. It is designed to allow users to revisit, manage, and internalize motivational quotes that truly resonate with them, anytime and anywhere.
 
 Key Value
- - Cross-Platform Experience: 동일한 NestJS 백엔드를 공유하여 모바일(App)과 웹(Web) 간의 데이터 동기화를 구현, 끊김 없는 사용자 경험을 제공합니다.
- - Personalized Archive: 단순 조회를 넘어, 사용자별 즐겨찾기 기능을 통해 나만의 동기부여 아카이브를 구축할 수 있습니다.
- - Global Accessibility: 다국어 지원 기능을 통해 글로벌 사용자들이 각자의 언어로 최적화된 동기부여 메시지를 접할 수 있도록 설계했습니다.
+ - Cross-Platform Experience: Shared NestJS backend ensures seamless data synchronization between mobile and web, providing a consistent user experience.
+ - Personalized Archive: Beyond simple browsing, users can build their own motivational archives through a personalized "Favorites" system.
+ - Global Accessibility: Designed with multi-language support to ensure global users receive optimized motivational messages in their preferred language.
 
 ## Features
- - 인증 시스템: 로그인 및 회원가입 UI/UX 제공
- - 문구 큐레이션: 실시간 동기부여 문구 조회 및 다국어 실시간 번역 지원
- - 아카이브: 사용자별 즐겨찾기(스크랩) 추가 및 제거 기능
- - 세션 유지: 리로드 시에도 로그아웃되지 않도록 브라우저 저장소를 활용한 세션 관리
+ - Authentication System: Comprehensive Login and Sign-up UI/UX.
+ - Quote Curation: Real-time browsing of motivational quotes with integrated multi-language translation.
+ - Archiving: Add or remove quotes from a user-specific "Favorites" list.
+ - Session Persistence: Utilizes browser storage to ensure users stay logged in even after page reloads.
 
 ## Tech Stack
 Frontend
@@ -24,65 +26,60 @@ Frontend
 
 Deployment & Storage
 - Frontend Deployment: Vercel
-- Persistence: localStorage (사용자 데이터 및 설정 저장)
+- Persistence: localStorage (Save User Data and Settings)
 
 ## Troubleshooting
-1. localStorage를 이용한 자동 로그아웃 방지
+1. Handling State Loss on Page Reloads
+Problem: Initially, using Redux caused the in-memory state to reset upon page refresh, resulting in unexpected logouts.
 
-문제: 초기 설계 시 Redux를 사용했으나, 페이지 새로고침(Reload) 시 In-memory 상태가 초기화되어 로그인이 해제되는 현상 발생.
+Root Cause: Redux stores data in volatile memory. Furthermore, for a project of this scale, the boilerplate code for Redux was hindering productivity.
 
-원인: Redux는 브라우저 메모리상에서 상태를 관리하므로, 새로고침 시 데이터가 휘발됨. 프로젝트 규모에 비해 복잡한 보일러플레이트 코드가 생산성 저하를 유발함.
+Solution: Removed the Redux dependency and implemented a streamlined structure using React's built-in Hooks synchronized with localStorage.
 
-해결: Redux를 완전히 제거하고, React 내장 Hook과 localStorage를 직접 연동하는 방식으로 구조를 개선
+Results: Reduced bundle size by removing external libraries, improved maintainability through simpler logic, and achieved stable session persistence.
 
-성과: 
- - 불필요한 외부 라이브러리 의존성 제거로 번들 사이즈 감소
- - 로그인 상태 및 토큰 관리 로직이 단순해져 유지보수 효율성 증대
- - 새로고침 시에도 localStorage를 통해 유저 세션이 안정적으로 유지
+2. Resolving CORS Issues in Production (Next.js - NestJS)
+Problem: API calls that worked locally were blocked by Access-Control-Allow-Origin errors after deploying to Vercel.
 
-2. 배포 환경에서의 CORS 에러 (Next.js - NestJS 연동)
+Root Cause: The NestJS backend's CORS whitelist did not include the dynamically generated Vercel production domain.
 
-문제: 로컬 환경에서는 정상 작동하던 API 호출이 Vercel 배포 후 Access-Control-Allow-Origin 에러와 함께 차단됨
-
-원인: NestJS 백엔드의 CORS 허용 목록(Origin)에 Vercel의 자동 생성 도메인이 누락
-
-해결: 백엔드 환경 변수에 정확한 Vercel 도메인을 추가
+Solution: Updated the backend environment variables to explicitly include the correct Vercel domain.
 
 ## Technical Decisions
-1. [보안 강화] XSS 공격 방지를 위한 인증 구조 설계
-문제 상황: Refresh Token을 localStorage로 두게 될 경우, JS로 접근이 가능하여 XSS(Cross-Site Scripting) 공격에 노출될 경우 사용자의 인증 토큰이 탈취될 위험이 있음
+1. [Security Enhancement] Protecting Against XSS Attacks
+Challenge: Storing a Refresh Token in localStorage makes it accessible via JavaScript, creating a vulnerability where a user's session could be hijacked through a Cross-Site Scripting (XSS) attack.
 
-해결책: Refresh Token을 httpOnly 및 Secure 옵션이 적용된 쿠키에 저장하도록 설계. 또한 client가 아닌 server에 둠으로써 쉽게 접근하지 못하도록 방지함.
+Solution: Designed the system to store the Refresh Token in an httpOnly and Secure cookie. By managing this on the server-side, we prevent client-side scripts from accessing sensitive credentials.
 
-전략: 상대적으로 노출되어도 위험도가 낮은 Access Token은 localStorage에 저장하여 자동 로그인 로직을 구현하되, 보안이 중요한 Refresh Token은 서버 측에서 관리하는 이중 인증 구조를 채택함.
+Strategy: Adopted a Dual-Token Strategy: The Access Token (relatively lower risk) is stored in localStorage for smooth client-side logic, while the high-stakes Refresh Token is protected by server-side security layers.
 
 
 ## Screenshot
-**로그인 / 회원가입**
+**Login & Sign-up**
 
 <img width="400" height="400" alt="스크린샷 2026-02-26 150114" src="https://github.com/user-attachments/assets/0d3d9008-99ab-489e-b297-1fdde0975a6b" />
 <img width="400" height="400" alt="스크린샷 2026-02-26 150123" src="https://github.com/user-attachments/assets/50a4c9e8-4796-4604-a3ce-fc4f567c67ed" />
 
-회원가입 화면에서 id, 비밀번호, 언어 등을 설정할 수 있습니다
+You can set id, password, language, etc. on the membership registration screen
 
 
-**모티베이션 문구 화면**
+**Motivation Screen**
 
 <img width="400" height="400" alt="스크린샷 2026-02-26 145723" src="https://github.com/user-attachments/assets/04130abc-4337-4ec3-970d-a4caea3e2052" />
 
 
-**언어 변경**
+**Language Change**
 
 <img width="400" height="400" alt="스크린샷 2026-02-26 145735" src="https://github.com/user-attachments/assets/41da0dba-5957-458b-9ada-a6f5e967df12" />
 
-언어 변경시 실시간 번역 기능 지원합니다
+It supports real-time translation when changing languages
 
 
-**즐겨찾기 화면**
+**Favorite Screen**
 
 <img width="400" height="400" alt="스크린샷 2026-02-26 145815" src="https://github.com/user-attachments/assets/d2db9e95-0cb6-4f51-9d7b-b0f29d0be73d" />
 
-즐겨찾기 등록하면 "즐겨찾기 화면"에서 문구들을 볼수있습니다
+If you register as a favorite, you can see the phrases on the "Favorite Screen"
 
 ## Related Repositories
 - Frontend Application: https://github.com/aoyagi0105/motivation-Maker.git
@@ -90,7 +87,7 @@ Deployment & Storage
 
 
 ## Environment Variables
-프로젝트 실행을 위해 `.env.local` 파일에 아래 설정이 필요합니다.
+The following settings are required in the file '.env.local' for project execution.
 
 ```env
 NEXT_PUBLIC_API_URL=your_backend_api_url
